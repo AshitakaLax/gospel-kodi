@@ -1,0 +1,12 @@
+# Kodi runs on Linux (LibreELEC); keep text files LF in the working tree and repo
+# so files copied straight to the device behave predictably.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary
+*.ttf binary
+*.otf binary

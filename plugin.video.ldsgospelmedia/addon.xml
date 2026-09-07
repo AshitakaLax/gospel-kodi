@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="plugin.video.ldsgospelmedia"
+       name="LDS Gospel Media"
+       version="1.0.0"
+       provider-name="Levi Balling">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="addon.py">
+    <provides>video audio</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Video, audio and scripture text from the Church of Jesus Christ of Latter-day Saints media library</summary>
+    <description lang="en_GB">Browse and play the public media library of The Church of Jesus Christ of Latter-day Saints.
+
+Opens on the current week's Come, Follow Me lesson and the For the Strength of Youth material, then lets you browse broadcasts, videos for youth, music videos, topics and podcasts. Hymns, the Children's Songbook and youth and contemporary music play through the Kodi audio player with full track metadata.
+
+Lesson text, articles and scripture are rendered in a purpose-built reading window styled after printed scripture rather than a plain text dialog.
+
+This add-on is not affiliated with or endorsed by The Church of Jesus Christ of Latter-day Saints. It accesses publicly available content only.</description>
+    <license>MIT</license>
+    <platform>all</platform>
+    <source>https://github.com/AshitakaLax/gospel-kodi</source>
+    <website>https://www.churchofjesuschrist.org/media</website>
+    <news>v1.0.0
+- Initial release.</news>
+    <assets>
+      <icon>icon.png</icon>
+      <fanart>fanart.png</fanart>
+    </assets>
+  </extension>
+</addon>

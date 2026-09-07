@@ -1,0 +1,170 @@
+# Kodi Media Center language file
+# Addon Name: LDS Gospel Media
+# Addon id: plugin.video.ldsgospelmedia
+# Addon Provider: Levi Balling
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.video.ldsgospelmedia\n"
+"Report-Msgid-Bugs-To: https://github.com/AshitakaLax/gospel-kodi\n"
+"POT-Creation-Date: 2026-09-06 00:00+0000\n"
+"PO-Revision-Date: 2026-09-06 00:00+0000\n"
+"Last-Translator: Levi Balling\n"
+"Language-Team: English (United Kingdom)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_gb\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Settings: Playback
+msgctxt "#30100"
+msgid "Playback"
+msgstr ""
+
+msgctxt "#30101"
+msgid "Video"
+msgstr ""
+
+msgctxt "#30102"
+msgid "Preferred video quality"
+msgstr ""
+
+msgctxt "#30103"
+msgid "Lower qualities are used automatically when the preferred one is unavailable."
+msgstr ""
+
+msgctxt "#30104"
+msgid "1080p"
+msgstr ""
+
+msgctxt "#30105"
+msgid "720p"
+msgstr ""
+
+msgctxt "#30106"
+msgid "360p"
+msgstr ""
+
+# Settings: Advanced
+msgctxt "#30110"
+msgid "Advanced"
+msgstr ""
+
+msgctxt "#30111"
+msgid "Caching"
+msgstr ""
+
+msgctxt "#30112"
+msgid "Cache lifetime (minutes)"
+msgstr ""
+
+msgctxt "#30113"
+msgid "How long fetched listings are reused before being requested again. Set to 0 to disable caching."
+msgstr ""
+
+msgctxt "#30114"
+msgid "Clear cached data"
+msgstr ""
+
+msgctxt "#30115"
+msgid "Diagnostics"
+msgstr ""
+
+msgctxt "#30116"
+msgid "Enable debug logging"
+msgstr ""
+
+msgctxt "#30117"
+msgid "Writes detailed add-on activity to the Kodi log. Useful when reporting a problem."
+msgstr ""
+
+# Main menu
+msgctxt "#30200"
+msgid "Come, Follow Me - This Week"
+msgstr ""
+
+msgctxt "#30201"
+msgid "For the Strength of Youth"
+msgstr ""
+
+msgctxt "#30202"
+msgid "Broadcast and Live Event Recordings"
+msgstr ""
+
+msgctxt "#30203"
+msgid "Videos for Youth"
+msgstr ""
+
+msgctxt "#30204"
+msgid "Music Videos"
+msgstr ""
+
+msgctxt "#30205"
+msgid "Topics"
+msgstr ""
+
+msgctxt "#30206"
+msgid "Podcasts and Radio"
+msgstr ""
+
+msgctxt "#30207"
+msgid "Music Library"
+msgstr ""
+
+msgctxt "#30208"
+msgid "Hymns"
+msgstr ""
+
+msgctxt "#30209"
+msgid "Children's Songbook"
+msgstr ""
+
+msgctxt "#30210"
+msgid "Youth and Contemporary"
+msgstr ""
+
+msgctxt "#30211"
+msgid "Video Collections"
+msgstr ""
+
+msgctxt "#30212"
+msgid "Scriptures"
+msgstr ""
+
+# Notifications and errors
+msgctxt "#30300"
+msgid "LDS Gospel Media"
+msgstr ""
+
+msgctxt "#30301"
+msgid "Could not reach churchofjesuschrist.org"
+msgstr ""
+
+msgctxt "#30302"
+msgid "Nothing was found here"
+msgstr ""
+
+msgctxt "#30303"
+msgid "This collection is currently unavailable"
+msgstr ""
+
+msgctxt "#30304"
+msgid "This item could not be played"
+msgstr ""
+
+msgctxt "#30305"
+msgid "Cached data cleared"
+msgstr ""
+
+msgctxt "#30306"
+msgid "Loading..."
+msgstr ""
+
+# Reading window
+msgctxt "#30400"
+msgid "Read"
+msgstr ""
+
+msgctxt "#30401"
+msgid "Listen"
+msgstr ""

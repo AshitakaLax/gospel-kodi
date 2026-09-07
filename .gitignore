@@ -14,8 +14,11 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# NOTE: anchored to the repo root on purpose. An unanchored "lib/" matches at any
+# depth and would silently exclude plugin.video.ldsgospelmedia/resources/lib/,
+# which is the entire add-on.
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -216,3 +219,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Kodi add-on packaging
+*.zip
+
+# Editors
+.vscode/
+.idea/
