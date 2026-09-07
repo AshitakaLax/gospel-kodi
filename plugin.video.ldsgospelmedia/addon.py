@@ -11,7 +11,7 @@ from urllib.parse import parse_qsl, urlencode
 import xbmcgui
 import xbmcplugin
 
-from resources.lib import kodiutils
+from resources.lib import api, kodiutils
 from resources.lib.kodiutils import L, log, log_error
 
 _BASE_URL = sys.argv[0]
@@ -104,7 +104,9 @@ def music():
 
 @route("clear_cache")
 def clear_cache():
-    """Wired to the settings button. Implemented in Phase 2.1 alongside the cache."""
+    """Wired to the "clear cached data" button in settings."""
+    removed = api.clear_cache()
+    log("cleared {0} cached document(s)".format(removed))
     kodiutils.notify(L(30305))
 
 
@@ -128,4 +130,6 @@ def dispatch(query_string):
 
 
 if __name__ == "__main__":
+    kodiutils.install_log_bridge()
+    api.configure(kodiutils.cache_directory(), kodiutils.cache_ttl_seconds())
     dispatch(sys.argv[2] if len(sys.argv) > 2 else "")

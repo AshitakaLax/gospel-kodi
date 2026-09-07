@@ -3,6 +3,9 @@
 Everything that touches ``xbmc*`` lives here or in the presentation modules, which
 keeps :mod:`resources.lib.api` importable outside Kodi for off-device debugging.
 """
+import logging
+import os
+
 import xbmc
 import xbmcaddon
 import xbmcgui
@@ -84,3 +87,50 @@ def image_url(image_id, width=640):
     if not image_id:
         return ""
     return const.IMAGE_URL.format(image_id=image_id, width=width)
+
+
+# --------------------------------------------------------------------------------
+# Bridging the data layer's logging into Kodi
+# --------------------------------------------------------------------------------
+#
+# The data layer uses the standard :mod:`logging` module so that it stays free of
+# Kodi imports. This handler forwards those records into the Kodi log, giving one
+# consistent, greppable stream on the device and plain stderr output off it.
+
+_LEVEL_MAP = {
+    logging.DEBUG: xbmc.LOGDEBUG,
+    logging.INFO: xbmc.LOGINFO,
+    logging.WARNING: xbmc.LOGWARNING,
+    logging.ERROR: xbmc.LOGERROR,
+    logging.CRITICAL: xbmc.LOGFATAL,
+}
+
+
+class _KodiLogHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            log(self.format(record), _LEVEL_MAP.get(record.levelno, xbmc.LOGDEBUG))
+        except Exception:  # pragma: no cover - logging must never raise
+            self.handleError(record)
+
+
+def install_log_bridge():
+    """Route ``resources.lib`` log records into the Kodi log. Idempotent."""
+    logger = logging.getLogger("resources.lib")
+    if any(isinstance(h, _KodiLogHandler) for h in logger.handlers):
+        return
+    handler = _KodiLogHandler()
+    handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG if get_bool_setting("debug_logging") else logging.INFO)
+    logger.propagate = False
+
+
+def cache_directory():
+    """Per-profile directory for cached listings."""
+    return os.path.join(PROFILE_PATH, "cache")
+
+
+def cache_ttl_seconds():
+    """Cache lifetime from settings, in seconds. Zero disables caching entirely."""
+    return max(0, get_int_setting("cache_minutes", 360)) * 60

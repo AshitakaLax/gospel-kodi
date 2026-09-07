@@ -19,7 +19,7 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | 1 — Initialisation | 1.1 Tracking documents | ✅ Complete |
 | | 1.2 Add-on skeleton | ✅ Complete |
 | | 1.3 Router entry point | ✅ Complete |
-| 2 — Data layer | 2.1 Networking, cache, study API | ⬜ Pending |
+| 2 — Data layer | 2.1 Networking, cache, study API | ✅ Complete |
 | | 2.2 Come, Follow Me fetcher | ⬜ Pending |
 | | 2.3 For the Strength of Youth + collections | ⬜ Pending |
 | 3 — Navigation | 3.1 ListItem mapping | ⬜ Pending |
@@ -117,7 +117,7 @@ LF so files copied straight onto LibreELEC behave predictably.
 ### Phase 1, Stage 1.3 — Router entry point
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 2.1 commit)_
+- **Commit:** [`ed67ed4`](https://github.com/AshitakaLax/gospel-kodi/commit/ed67ed4)
 - **Delivered:** `addon.py`, `resources/lib/const.py`, `resources/lib/kodiutils.py`,
   package `__init__.py` files
 
@@ -149,3 +149,59 @@ rollover.
 **Known gap carried forward.** The `cfm_current`, `fsy`, `collection`, `music_videos` and
 `music` routes currently end an empty directory; they are filled in during Phases 2 and 3.
 `clear_cache` notifies but does nothing until the cache exists in Stage 2.1.
+
+---
+
+## Phase 2 — Data layer
+
+### Phase 2, Stage 2.1 — Networking, caching and the study API
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 2.2 commit)_
+- **Delivered:** `resources/lib/net.py`, `resources/lib/cache.py`,
+  `resources/lib/api.py`; logging bridge and cache wiring in `kodiutils.py` and
+  `addon.py`
+
+**Networking.** `net.py` uses `urllib` only. It sends an honest User-Agent that
+identifies the add-on, requests gzip and inflates it, and retries with linear backoff —
+but only for genuinely transient statuses (408, 429, 500, 502, 503, 504). Any other 4xx
+is a definitive answer and is raised immediately instead of being hammered. Every failure
+surfaces as a single `NetworkError`, so callers have one exception to catch.
+`resolve_redirect()` follows a URL using a one-byte `Range` request, because the asset
+service answers `HEAD` with 405.
+
+**Caching.** `cache.py` stores JSON on disk keyed by a SHA-1 of the caller's key, with a
+TTL from settings. Writes go to a temporary file and are then renamed, so an interrupted
+write cannot leave a half-written document that a later read has to recover from; a
+corrupt entry is discarded and treated as a miss. Cache failures are logged and swallowed
+— a broken cache must never break a listing. The directory is injected rather than looked
+up from Kodi, which is what keeps the module runnable off-device.
+
+**Study API.** `api.get_study_page()` normalises the response into `title`, `body`,
+`audio` and `canonical_url`. `list_study_children()` parses a manual's table of contents
+into child pages, de-duplicating links because a contents page routinely links the same
+target from both a heading and a thumbnail.
+
+**Logging.** The data layer uses the standard `logging` module to stay Kodi-free; a
+handler installed in `kodiutils` forwards those records into the Kodi log with the
+`[LDSGospelMedia]` prefix. On the device there is one greppable stream; from a terminal
+the same records go to stderr.
+
+**Verification (live).**
+
+| Probe | Result |
+| --- | --- |
+| `study /manual/hymns` | "Hymns of The Church of Jesus Christ of Latter-day Saints", 51,333 chars |
+| `children /manual/hymns` | Individual hymns resolved — "The Morning Breaks", "The Spirit of God", … |
+| `study …old-testament-2026/36` | "August 31–September 6 …Psalms 102–103…" plus a narration MP3 |
+| `resolve dfuelx0…` | HTTP 206, `video/mp4`, signed URL — confirmed playable |
+| Cache cold vs. warm | 0.60 s → 0.045 s, and `clear()` removed the entry |
+
+An automated check now asserts that `api.py`, `net.py`, `cache.py` and `const.py` contain
+no `xbmc*` import, so the boundary that makes off-device debugging possible cannot be
+broken silently.
+
+**Incidental finding.** The study API answers a malformed `uri` with HTTP 500 rather than
+404. Because 500 is in the retryable set, a bad URI costs three requests before failing.
+Acceptable for now — real URIs come from parsed links, not user input — but worth
+remembering if a listing ever seems slow to fail.
