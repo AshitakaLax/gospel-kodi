@@ -11,8 +11,8 @@ position and calls ``ControlTextBox.scroll()``, which is what lets Up/Down and t
 page keys behave the way a reader expects.
 """
 import logging
+import re
 
-import xbmc
 import xbmcgui
 
 from resources.lib import kodiutils
@@ -111,11 +111,12 @@ class ScriptureViewer(xbmcgui.WindowXML):
             LOG.debug("scroll to %d failed: %s", target, exc)
 
 
+_MARKUP = re.compile(r"\[/?(?:B|I|COLOR[^\]]*)\]")
+
+
 def _strip_markup(text):
     """Remove Kodi inline markup so length estimates reflect visible characters."""
-    import re
-
-    return re.sub(r"\[/?(?:B|I|COLOR[^\]]*)\]", "", text)
+    return _MARKUP.sub("", text)
 
 
 def show(title, body, reference=""):

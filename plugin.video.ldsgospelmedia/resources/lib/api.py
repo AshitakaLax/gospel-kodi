@@ -16,10 +16,13 @@ Sources, in order of reliability:
 3. The **media library**, which has no JSON API and is parsed best-effort in a later
    stage; failures there degrade to an empty list rather than an error.
 """
+import calendar
+import html
 import logging
 import os
 import re
 import tempfile
+from datetime import date
 
 from resources.lib import const, rsc
 from resources.lib.cache import Cache
@@ -119,10 +122,8 @@ _TAGS = re.compile(r"<[^>]+>")
 
 def _plain_text(fragment):
     """Collapse an HTML fragment to a single line of readable text."""
-    import html as html_module
-
     text = _TAGS.sub(" ", fragment)
-    return re.sub(r"\s+", " ", html_module.unescape(text)).strip()
+    return re.sub(r"\s+", " ", html.unescape(text)).strip()
 
 
 def list_study_children(uri, pattern=None, use_cache=True):
@@ -209,8 +210,6 @@ def get_cfm_media(today=None, use_cache=True):
 
     Returns ``[]`` if any link in the chain is missing.
     """
-    import calendar
-
     today = today or _today()
     month_name = calendar.month_name[today.month].lower()
 
@@ -248,8 +247,6 @@ def get_cfm_lessons(today=None, use_cache=True):
 
 
 def _today():
-    from datetime import date
-
     return date.today()
 
 

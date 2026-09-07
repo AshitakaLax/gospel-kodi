@@ -32,7 +32,7 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | | 5.3 Text binding | ✅ Complete |
 | 6 — Polish | 6.1 Error handling | ✅ Complete |
 | | 6.2 Caching and load times | ✅ Complete |
-| | 6.3 Cleanup and packaging | ⬜ Pending |
+| | 6.3 Cleanup and packaging | ✅ Complete |
 
 ---
 
@@ -511,7 +511,7 @@ less jarring than scrolling into blank paper.
 ### Phase 6, Stages 6.1 and 6.2 — Error handling and caching
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 6.3 commit)_
+- **Commit:** [`5f51780`](https://github.com/AshitakaLax/gospel-kodi/commit/5f51780)
 - **Delivered:** hardened `dispatch()` with `_accepted_params()` and a top-level guard;
   `directory=False` route marking; per-read TTL override in `cache.py`;
   `STATIC_TTL_MULTIPLIER` in `api.py`; string 30308
@@ -545,3 +545,75 @@ scales everything, and setting it to zero still disables caching completely.
 
 Verified by ageing a cached entry past the base TTL and making any network call raise:
 the page was still served from cache, and a zero setting correctly refused to serve it.
+
+---
+
+### Phase 6, Stage 6.3 — Cleanup, dependency verification and packaging
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(final commit of the build)_
+- **Delivered:** `README.md`; hoisted function-level imports; release zip built to
+  `dist/` (git-ignored, as a build artefact should be)
+
+**Dependency audit.** An AST walk over all 13 modules collected every import and checked
+it against `sys.stdlib_module_names` plus the Kodi modules. **Zero third-party
+dependencies**, which is what makes the add-on safe to drop onto a LibreELEC image with
+no `script.module.*` install step to fail.
+
+The same audit confirms the architectural boundary still holds: `api.py`, `net.py`,
+`cache.py`, `cfm.py`, `const.py`, `html2text.py` and `rsc.py` import nothing from Kodi;
+only `addon.py`, `kodiutils.py`, `listing.py` and `viewer.py` do.
+
+**Cleanup.** Imports that had accumulated inside function bodies during iteration
+(`calendar`, `datetime`, `html`, `re`) were hoisted to module scope, and the markup-
+stripping regex in `viewer.py` is now compiled once rather than per call. The deferred
+import of `html2text`/`viewer` inside the `read` route was deliberately kept: it pulls in
+the window classes, which every directory listing would otherwise pay for on each
+navigation.
+
+**Packaging.** `dist/plugin.video.ldsgospelmedia-1.0.0.zip` — 21 files, 569 KB, integrity
+checked, with every required file present and no `.pyc` artefacts. It is git-ignored;
+build outputs do not belong in the repository.
+
+**Final verification.**
+
+| Check | Result |
+| --- | --- |
+| `cfm-current` | Exit 0 — arithmetic agrees with the published title |
+| `cfm-list` | 52 lessons |
+| `fsy`, `collection broadcasts`, `resolve` | All exit 0 |
+| Menu regression | All routes render; no missing string ids |
+| Third-party dependencies | None |
+| Archive | Integrity OK; all required files present |
+
+---
+
+## Build summary
+
+All six phases complete, in 12 commits. The add-on browses and plays video, audio and
+text, opens on the current week's curriculum, and renders text in a purpose-built reading
+window.
+
+**What the research changed.** The brief assumed a reverse-engineered REST/GraphQL media
+API. No such API exists. Building instead on the Gospel Library study API — with
+media-library parsing as an isolated, failure-tolerant supplement — produced something
+more reliable than the original design would have: the hymnal returns all 341 hymns where
+the media library would have capped at 24.
+
+**Bugs caught by checking against real data rather than assuming.** Each of these would
+have shipped silently:
+
+1. Come, Follow Me has **52 lessons, not 48**; the clamp would have served the wrong
+   lesson for the last six weeks of every year.
+2. Skipping footnote anchors was **deleting scripture text** — "having been born of goodly
+   parents" became "having been of ,".
+3. Whitespace between inline elements was dropped, giving "goodlyparents".
+4. An unexpected query parameter **crashed the router** with a traceback.
+5. Audio `downloadType: ORIGINAL` was silently discarded, so every media-library audio
+   URL was being thrown away.
+6. The stock `.gitignore` would have **excluded the entire add-on** from version control.
+
+**Remaining work is on-device.** Everything here was verified against live endpoints and
+a stub, but nothing has run inside Kodi. The reading window in particular — font sizes,
+the measure, scroll feel — is the piece most likely to need adjustment once seen on a
+television.
