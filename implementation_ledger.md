@@ -22,7 +22,7 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | 2 — Data layer | 2.1 Networking, cache, study API | ✅ Complete |
 | | 2.2 Come, Follow Me fetcher | ✅ Complete |
 | | 2.3 For the Strength of Youth + collections | ✅ Complete |
-| 3 — Navigation | 3.1 ListItem mapping | ⬜ Pending |
+| 3 — Navigation | 3.1 ListItem mapping | ✅ Complete |
 | | 3.2 Dynamic main menu | ⬜ Pending |
 | | 3.3 Browse tree | ⬜ Pending |
 | 4 — Playback | 4.1 Video resolution | ⬜ Pending |
@@ -252,7 +252,7 @@ degrades to stale-but-working rather than a 404.
 ### Phase 2, Stage 2.3 — For the Strength of Youth and media collections
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 3.1 commit)_
+- **Commit:** [`b62e236`](https://github.com/AshitakaLax/gospel-kodi/commit/b62e236)
 - **Delivered:** `resources/lib/rsc.py`; `get_fsy()`, `get_fsy_overview()` and
   `get_collection()` in `api.py`; `fsy` and `collection` CLI probes;
   `MEDIA_COLLECTION` in `const.py`
@@ -307,3 +307,29 @@ sections are unaffected: the hymnal and Come Follow Me return their full content
 this would mean reverse-engineering the client's own fetch call, which is exactly the
 brittle work the chosen strategy avoids; it is recorded here as a known trade-off rather
 than a defect.
+
+---
+
+## Phase 3 — Main menu and navigation
+
+### Phase 3, Stage 3.1 — ListItem mapping
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 3.2 commit)_
+- **Delivered:** `resources/lib/listing.py`
+
+**Notes.** Kodi 21 deprecated `ListItem.setInfo()` in favour of typed info tags, so
+`video()`, `audio()` and `text()` all go through `getVideoInfoTag()` /
+`getMusicInfoTag()`. Playable entries set the `IsPlayable` property so Kodi calls back
+into the plugin for a resolved URL instead of trying to open the plugin path directly;
+`text()` sets it to `false`, because selecting a readable page opens the scripture window
+rather than handing anything to the player.
+
+The module presents items but does not know where they point — callers pass a finished
+`plugin://` URL. URL construction stays in the router, which keeps this module free of a
+dependency on `addon.py` and avoids a circular import.
+
+**One deliberate default worth recording.** `finish()` applies
+`SORT_METHOD_UNSORTED` unless told otherwise, so source order survives. That order carries
+real information: hymns are numbered, conference talks run in session order, and Come
+Follow Me lessons run by week. Alphabetising any of them would destroy it.
