@@ -427,7 +427,54 @@ def play_audio(url=None, asset_id=None, title=None, album=None, duration=None):
 
 @route("read")
 def read(uri=None):
-    """Open the scripture reading window. Implemented in Phase 5."""
+    """Open a page in the scripture reading window.
+
+    Deliberately not a directory action and not Kodi's TextViewer dialog: the text
+    is the point, so it gets a full window styled as a page.
+    """
+    if not uri:
+        log_error("read called without a uri")
+        return
+
+    try:
+        page = api.get_study_page(uri)
+    except Exception as exc:  # noqa: BLE001
+        log_error("cannot read {0}: {1}".format(uri, exc))
+        kodiutils.notify_error(L(30301))
+        return
+
+    # Imported here rather than at module scope: this pulls in the window classes,
+    # which every directory listing would otherwise pay for on each navigation.
+    from resources.lib import html2text, viewer
+
+    body = html2text.to_text(page["body"])
+    if not body:
+        log_error("{0} produced no readable text".format(uri))
+        kodiutils.notify_error(L(30302))
+        return
+
+    title, reference = _split_heading(page["title"])
+    log("opening reader for {0} ({1} chars)".format(uri, len(body)))
+    viewer.show(title, body, reference)
+
+
+def _split_heading(title):
+    """Split a page title into a heading and a secondary reference line.
+
+    Lesson titles pack a date, a quotation and a scripture range into one string;
+    splitting them lets the window show a heading that fits and keep the detail on
+    its own line underneath.
+    """
+    title = (title or "").strip()
+    if ". " in title:
+        head, rest = title.split(". ", 1)
+        if len(head) <= 40:
+            return head, rest.strip()
+    if ": " in title:
+        head, rest = title.split(": ", 1)
+        if len(head) <= 60:
+            return head, rest.strip()
+    return title, ""
 
 
 @route("clear_cache")

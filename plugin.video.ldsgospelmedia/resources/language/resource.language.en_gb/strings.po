@@ -184,3 +184,7 @@ msgstr ""
 msgctxt "#30401"
 msgid "Listen"
 msgstr ""
+
+msgctxt "#30402"
+msgid "Up / Down to scroll     Page Up / Page Down to turn the page     Back to close"
+msgstr ""
