@@ -18,7 +18,7 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | --- | --- | --- |
 | 1 — Initialisation | 1.1 Tracking documents | ✅ Complete |
 | | 1.2 Add-on skeleton | ✅ Complete |
-| | 1.3 Router entry point | ⬜ Pending |
+| | 1.3 Router entry point | ✅ Complete |
 | 2 — Data layer | 2.1 Networking, cache, study API | ⬜ Pending |
 | | 2.2 Come, Follow Me fetcher | ⬜ Pending |
 | | 2.3 For the Strength of Youth + collections | ⬜ Pending |
@@ -77,7 +77,7 @@ English only, and on-device verification against a real Kodi 21 box.
 ### Phase 1, Stage 1.2 — Add-on skeleton
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 1.3 commit)_
+- **Commit:** [`6add68d`](https://github.com/AshitakaLax/gospel-kodi/commit/6add68d)
 - **Delivered:** `plugin.video.ldsgospelmedia/` with `addon.xml`, `icon.png`,
   `fanart.png`, `LICENSE.txt`, `resources/settings.xml`,
   `resources/language/resource.language.en_gb/strings.po`; repository `.gitignore`
@@ -111,3 +111,41 @@ while appearing to work locally. The rule is now anchored as `/lib/` with a comm
 explaining why, and the fix was verified with `git check-ignore`. Packaging artefacts
 (`*.zip`) and editor directories are now ignored, and `.gitattributes` pins text files to
 LF so files copied straight onto LibreELEC behave predictably.
+
+---
+
+### Phase 1, Stage 1.3 — Router entry point
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 2.1 commit)_
+- **Delivered:** `addon.py`, `resources/lib/const.py`, `resources/lib/kodiutils.py`,
+  package `__init__.py` files
+
+**Notes.** `addon.py` is deliberately thin. A `@route("name")` decorator populates a
+dispatch table, `build_url()` composes nested `plugin://` URLs while dropping empty
+parameters, and `dispatch()` decodes `sys.argv[2]` and calls the handler with the query
+parameters as keyword arguments. An unknown action logs an error, notifies the user and
+ends the directory with `succeeded=False` rather than raising into the Kodi log. The main
+menu renders the standing categories now; Phase 3.2 inserts the two dynamic entries above
+them.
+
+**`const.py` holds every verified endpoint and imports nothing from Kodi**, which is what
+allows the Phase 2 data layer to be exercised from a plain interpreter. `kodiutils.py`
+concentrates the Kodi-facing helpers: localised string lookup, typed settings accessors, a
+validated quality getter, notifications, and a `log()` that prefixes `[LDSGospelMedia]`
+and suppresses debug lines unless the user enables the logging setting — so a normal
+install stays quiet in the Kodi log.
+
+An additional module beyond the planned file list, `kodiutils.py`, was introduced so that
+the Kodi/non-Kodi boundary stays clean; without it, every module would have needed its own
+copy of the logging and settings boilerplate.
+
+**Verification.** All three modules compile. The Come, Follow Me arithmetic was checked
+independently of the network: for 2026-09-06 the anchor of 2025-12-29 yields lesson 36,
+which matches the title returned by the live API during research
+("August 31–September 6"). This is the assertion that will catch the annual curriculum
+rollover.
+
+**Known gap carried forward.** The `cfm_current`, `fsy`, `collection`, `music_videos` and
+`music` routes currently end an empty directory; they are filled in during Phases 2 and 3.
+`clear_cache` notifies but does nothing until the cache exists in Stage 2.1.
