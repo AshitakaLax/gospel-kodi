@@ -191,6 +191,45 @@ def get_cfm_lesson(today=None, use_cache=True):
     return page
 
 
+def get_cfm_media(today=None, use_cache=True):
+    """Videos related to the current month's Come, Follow Me study.
+
+    Lesson pages carry text and narration audio but no video, so these come from
+    the media library, which files them by month. The collection chain is walked by
+    following the site's own links rather than by constructing slugs — the slugs are
+    stale (the "2026 Old Testament Resources" collection still sits at a 2025 URL),
+    and following links means a new curriculum year needs no code change.
+
+    Returns ``[]`` if any link in the chain is missing.
+    """
+    import calendar
+
+    today = today or _today()
+    month_name = calendar.month_name[today.month].lower()
+
+    root = get_collection(const.CFM_MEDIA_COLLECTION, use_cache=use_cache)
+    year = next((item for item in root if item["kind"] == "collection"), None)
+    if year is None:
+        LOG.warning("no curriculum-year collection under %s", const.CFM_MEDIA_COLLECTION)
+        return []
+
+    months = get_collection(year["slug"], use_cache=use_cache)
+    month = next(
+        (item for item in months if item["title"].strip().lower() == month_name), None
+    )
+    if month is None:
+        LOG.warning("no %s collection under %s", month_name, year["slug"])
+        return []
+
+    videos = [
+        item
+        for item in get_collection(month["slug"], use_cache=use_cache)
+        if item["kind"] == "video"
+    ]
+    LOG.debug("%d Come, Follow Me video(s) for %s", len(videos), month_name)
+    return videos
+
+
 def get_cfm_lessons(today=None, use_cache=True):
     """All lessons in the current manual's table of contents."""
     from resources.lib import cfm

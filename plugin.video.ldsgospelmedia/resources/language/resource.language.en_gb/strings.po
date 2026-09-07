@@ -131,6 +131,18 @@ msgctxt "#30212"
 msgid "Scriptures"
 msgstr ""
 
+msgctxt "#30213"
+msgid "All lessons this year"
+msgstr ""
+
+msgctxt "#30214"
+msgid "General Conference Music"
+msgstr ""
+
+msgctxt "#30215"
+msgid "Christmas Music"
+msgstr ""
+
 # Notifications and errors
 msgctxt "#30300"
 msgid "LDS Gospel Media"

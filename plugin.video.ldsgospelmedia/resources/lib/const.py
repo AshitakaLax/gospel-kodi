@@ -80,6 +80,16 @@ CFM_LESSON_COUNT = 52
 
 FSY_URI = "/manual/for-the-strength-of-youth"
 
+#: Media-library collection holding Come, Follow Me video resources. Lesson pages
+#: themselves contain text and narration but no video, so related videos come from
+#: here instead, nested as: come-follow-me -> <curriculum year> -> <month> -> videos.
+#:
+#: The chain is walked by following the site's own links rather than by building
+#: slugs, because the slugs lie: the collection titled "2026 Old Testament
+#: Resources" still lives at ".../2025-doctrine-and-covenants-resources". Following
+#: links also means the rollover to a new curriculum year needs no code change.
+CFM_MEDIA_COLLECTION = "come-follow-me"
+
 # --------------------------------------------------------------------------------
 # Music
 # --------------------------------------------------------------------------------

@@ -23,8 +23,8 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | | 2.2 Come, Follow Me fetcher | ✅ Complete |
 | | 2.3 For the Strength of Youth + collections | ✅ Complete |
 | 3 — Navigation | 3.1 ListItem mapping | ✅ Complete |
-| | 3.2 Dynamic main menu | ⬜ Pending |
-| | 3.3 Browse tree | ⬜ Pending |
+| | 3.2 Dynamic main menu | ✅ Complete |
+| | 3.3 Browse tree | ✅ Complete |
 | 4 — Playback | 4.1 Video resolution | ⬜ Pending |
 | | 4.2 Audio resolution | ⬜ Pending |
 | 5 — Scripture viewer | 5.1 Skin XML | ⬜ Pending |
@@ -315,7 +315,7 @@ than a defect.
 ### Phase 3, Stage 3.1 — ListItem mapping
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 3.2 commit)_
+- **Commit:** [`e983fba`](https://github.com/AshitakaLax/gospel-kodi/commit/e983fba)
 - **Delivered:** `resources/lib/listing.py`
 
 **Notes.** Kodi 21 deprecated `ListItem.setInfo()` in favour of typed info tags, so
@@ -333,3 +333,64 @@ dependency on `addon.py` and avoids a circular import.
 `SORT_METHOD_UNSORTED` unless told otherwise, so source order survives. That order carries
 real information: hymns are numbered, conference talks run in session order, and Come
 Follow Me lessons run by week. Alphabetising any of them would destroy it.
+
+---
+
+### Phase 3, Stages 3.2 and 3.3 — Dynamic main menu and browse tree
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 4.1 commit)_
+- **Delivered:** rewritten `addon.py` (main menu, Come Follow Me, For the Strength of
+  Youth, collection, manual, study-page and music routes); `get_cfm_media()` and
+  `CFM_MEDIA_COLLECTION`; four new strings
+
+**These two stages share one commit.** Both are changes to the same router, and the
+browse tree is what the main menu links into — splitting them would have meant committing
+a main menu whose entries led nowhere. Recorded here rather than passed off as two
+separate pieces of work.
+
+**Come, Follow Me videos were the missing piece.** Lesson pages carry text and narration
+but no video, so the "videos relating to this week's lesson" requirement needed another
+source. The media library files them under
+`lessons → come-follow-me → <curriculum year> → <month> → videos`.
+
+That chain is walked by following the site's own links rather than by building slugs,
+because the slugs are actively misleading: the collection titled "2026 Old Testament
+Resources" still lives at `.../2025-doctrine-and-covenants-resources`. Following links
+also means the rollover to a new curriculum year needs no code change at all.
+
+**The main menu presents content, not just folders.** The brief asked for short lists of
+current material on opening the add-on, so each curriculum section is a heading folder
+followed by a few of its own items — this week's lesson text, its narration, and the
+month's related videos. Kodi directories are flat, so preview items are indented, which
+is the only grouping cue available.
+
+Two presentation details came out of looking at the real strings. Lesson titles run to
+about 130 characters, so preview labels name only the date range ("Read: August
+31–September 6") while the heading carries the week. And the scripture reference is
+appended to the heading only when it is short enough to read — this week's
+"Psalms 102–103; 110; 116–119; …" is not, so it is correctly omitted.
+
+**Every dynamic part is individually guarded.** A section that cannot be fetched degrades
+to its bare folder, and the standing categories below always render. The add-on's first
+screen never depends on the network succeeding.
+
+**Verification.** A disposable Kodi stub (`xbmc`, `xbmcgui`, `xbmcplugin`, `xbmcaddon`,
+`xbmcvfs`) was written **in the scratchpad, deliberately not in the repository**, to walk
+the menus off-device. Its `getLocalizedString` reads the real `strings.po`, so a missing
+string id fails the run rather than showing blank text on the device.
+
+| Route | Result |
+| --- | --- |
+| `root` | 16 entries: both curriculum sections with live previews, then 7 categories |
+| `cfm_current` | Read, Listen, 2 September videos, all-lessons folder |
+| `fsy` | 16 chapters |
+| `manual /manual/hymns` | **341 hymns** — the study API returns the complete hymnal |
+| `collection broadcasts` | 17 sub-collections |
+| `collection april-2026-general-conference` | 24 playable videos |
+| `nonsense` | Fails cleanly: logs, notifies, `succeeded=False` |
+| String ids | None missing |
+
+The 341 hymns are worth noting against the media library's 24-item cap: they are the
+clearest evidence that routing the library through the study API rather than the media
+site was the right call.
