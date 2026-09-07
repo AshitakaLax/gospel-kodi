@@ -172,6 +172,10 @@ msgctxt "#30306"
 msgid "Loading..."
 msgstr ""
 
+msgctxt "#30307"
+msgid "The Church of Jesus Christ of Latter-day Saints"
+msgstr ""
+
 # Reading window
 msgctxt "#30400"
 msgid "Read"

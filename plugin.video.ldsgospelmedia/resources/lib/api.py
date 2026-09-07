@@ -311,10 +311,24 @@ def stream_url(asset_id, quality="1080"):
     The returned URL is stable and answers with a 302 to a signed, expiring MP4.
     Kodi follows that redirect itself at playback time, which is why the signed URL
     is never stored or cached.
+
+    No client-side quality fallback is needed: the service was verified to serve the
+    best available rendition for any height it does not recognise, so an unavailable
+    quality degrades on the server rather than failing. That saves a probe request
+    on every play.
     """
     if quality not in const.QUALITIES:
         quality = "1080"
     return const.BINARY_LOOKUP.format(asset_id=asset_id, quality=quality)
+
+
+def audio_url(asset_id):
+    """Build the playable URL for an audio asset.
+
+    Audio uses a different path on the same service to video, so this cannot share
+    :func:`stream_url`.
+    """
+    return const.AUDIO_LOOKUP.format(asset_id=asset_id)
 
 
 def verify_stream(asset_id, quality="1080"):

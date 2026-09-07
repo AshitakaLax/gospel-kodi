@@ -82,6 +82,17 @@ def _best_image(cover):
     return best_url
 
 
+#: ``downloadType`` values as published by the site. Video offers three heights;
+#: audio publishes a single ``ORIGINAL``, which is kept under its own key so it
+#: never competes with the video qualities the quality setting chooses between.
+_DOWNLOAD_TYPES = {
+    "SMALL": "360",
+    "MEDIUM": "720",
+    "LARGE": "1080",
+    "ORIGINAL": "original",
+}
+
+
 def _stream_from_downloads(downloads):
     """Map the site's own download list to ``{quality: url}``.
 
@@ -89,12 +100,11 @@ def _stream_from_downloads(downloads):
     actually exists for that asset. The ``?download=true`` flag is stripped so the
     URL streams instead of prompting a save.
     """
-    mapping = {"SMALL": "360", "MEDIUM": "720", "LARGE": "1080"}
     streams = {}
     for entry in downloads or []:
         if not isinstance(entry, dict):
             continue
-        quality = mapping.get(entry.get("downloadType"))
+        quality = _DOWNLOAD_TYPES.get(entry.get("downloadType"))
         url = entry.get("url")
         if quality and url:
             streams[quality] = url.split("?", 1)[0]
@@ -136,6 +146,13 @@ def _normalise(entry):
     item["asset_id"] = asset_id
     item["duration"] = _duration_seconds(entry.get("duration"))
     item["streams"] = _stream_from_downloads(entry.get("downloads"))
+
+    # Audio assets use a different resolver path to video - no "/v1/assets/" prefix
+    # and a bitrate where video takes a height - so the published "src" is kept and
+    # preferred for them rather than reconstructing the URL from the asset id.
+    src = entry.get("src")
+    if src:
+        item["src"] = src.split("?", 1)[0]
     return item
 
 

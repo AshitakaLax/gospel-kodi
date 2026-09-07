@@ -25,8 +25,8 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | 3 — Navigation | 3.1 ListItem mapping | ✅ Complete |
 | | 3.2 Dynamic main menu | ✅ Complete |
 | | 3.3 Browse tree | ✅ Complete |
-| 4 — Playback | 4.1 Video resolution | ⬜ Pending |
-| | 4.2 Audio resolution | ⬜ Pending |
+| 4 — Playback | 4.1 Video resolution | ✅ Complete |
+| | 4.2 Audio resolution | ✅ Complete |
 | 5 — Scripture viewer | 5.1 Skin XML | ⬜ Pending |
 | | 5.2 WindowXML class | ⬜ Pending |
 | | 5.3 Text binding | ⬜ Pending |
@@ -339,7 +339,7 @@ Follow Me lessons run by week. Alphabetising any of them would destroy it.
 ### Phase 3, Stages 3.2 and 3.3 — Dynamic main menu and browse tree
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 4.1 commit)_
+- **Commit:** [`e7b3c7b`](https://github.com/AshitakaLax/gospel-kodi/commit/e7b3c7b)
 - **Delivered:** rewritten `addon.py` (main menu, Come Follow Me, For the Strength of
   Youth, collection, manual, study-page and music routes); `get_cfm_media()` and
   `CFM_MEDIA_COLLECTION`; four new strings
@@ -394,3 +394,48 @@ string id fails the run rather than showing blank text on the device.
 The 341 hymns are worth noting against the media library's 24-item cap: they are the
 clearest evidence that routing the library through the study API rather than the media
 site was the right call.
+
+---
+
+## Phase 4 — Media playback
+
+### Phase 4, Stages 4.1 and 4.2 — Video and audio resolution
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 5.1 commit)_
+- **Delivered:** `play_video` and `play_audio` in `addon.py`; `audio_url()` and revised
+  `stream_url()` in `api.py`; `AUDIO_LOOKUP` in `const.py`; `src` and `ORIGINAL`
+  handling in `rsc.py`; string 30307
+
+**The planned quality fallback turned out to be unnecessary.** The plan called for
+falling back 1080 → 720 → 360 when a rendition was missing. Probing the resolver showed
+it already degrades server-side: `1080`, `720` and `360` each return their exact
+rendition, while `2160` — and even `banana` — return the best available 1080p file rather
+than a 404. Client-side fallback would have cost a probe request on every single play for
+no benefit, so it was dropped. The reasoning is recorded in `stream_url()` so it is not
+"helpfully" reinstated later.
+
+**Audio resolves through a different path, which the plan did not anticipate.** Video
+uses `/v1/assets/{id}/{height}/default.mp4`; audio uses
+`binary-lookup.churchofjesuschrist.org/{id}/{bitrate|max}/default` — no `/v1/assets/`
+prefix, a bitrate instead of a pixel height, and no extension. Audio items also publish
+`downloadType: "ORIGINAL"` rather than SMALL/MEDIUM/LARGE, so the parser was silently
+discarding every audio download URL. Both are now handled: `ORIGINAL` is kept under its
+own key so it never competes with the video heights the quality setting chooses between,
+and the item's published `src` is preferred for audio rather than reconstructing a URL.
+
+**Signed URLs are never stored.** Kodi is handed the resolver URL and follows the 302
+itself at play time, so the `exp`/`sig` pair is always fresh. Nothing with an expiry
+reaches the cache.
+
+**Verification (live, end to end).** Real items were pulled from live listings, played
+through the router, and the resolved paths were then fetched:
+
+| Path | Result |
+| --- | --- |
+| Media-library video | `resolved_ok=True`, HTTP 206 `video/mp4`, title "Saturday Morning Session" |
+| Media-library audio | `resolved_ok=True`, HTTP 206 `audio/mp3`, with title, artist and a 1,563 s duration |
+| Study-API narration | `resolved_ok=True`, HTTP 206 `audio/mpeg` for this week's lesson |
+
+Failure paths resolve with `False` and notify, which stops Kodi from stacking its own
+generic playback error on top of the add-on's message.

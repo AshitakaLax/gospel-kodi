@@ -9,6 +9,7 @@ to a handler, and leaves data work to :mod:`resources.lib.api` and presentation 
 import sys
 from urllib.parse import parse_qsl, urlencode
 
+import xbmcgui
 import xbmcplugin
 
 from resources.lib import api, const, listing, kodiutils
@@ -50,11 +51,22 @@ def add_media(item, indent=False):
         add_folder(item["title"], "collection", art=art, plot=item.get("description"),
                    slug=item["slug"])
     elif item["kind"] == "audio":
-        listing.add(_HANDLE, url_for("play_audio", asset_id=item["asset_id"]),
-                    listing.audio(item), False)
+        # The published "src" is preferred for audio: it already carries the correct
+        # resolver path, which differs from the video one.
+        listing.add(
+            _HANDLE,
+            url_for("play_audio", url=item.get("src"), asset_id=item["asset_id"],
+                    title=item["title"], duration=item.get("duration")),
+            listing.audio(item),
+            False,
+        )
     else:
-        listing.add(_HANDLE, url_for("play_video", asset_id=item["asset_id"]),
-                    listing.video(item), False)
+        listing.add(
+            _HANDLE,
+            url_for("play_video", asset_id=item["asset_id"], title=item["title"]),
+            listing.video(item),
+            False,
+        )
 
 
 # --------------------------------------------------------------------------------
@@ -350,16 +362,67 @@ def study_page(uri=None):
 # Playback and reading (Phases 4 and 5)
 # --------------------------------------------------------------------------------
 
+def _fail_playback(message):
+    """Tell Kodi the item could not be resolved, and say why on screen.
+
+    Resolving with ``False`` is what stops Kodi showing its own generic playback
+    error on top of ours.
+    """
+    log_error(message)
+    kodiutils.notify_error(L(30304))
+    xbmcplugin.setResolvedUrl(_HANDLE, False, xbmcgui.ListItem())
+
+
 @route("play_video")
-def play_video(asset_id=None):
-    """Resolve a video for the player. Implemented in Phase 4.1."""
-    xbmcplugin.setResolvedUrl(_HANDLE, False, listing.folder(""))
+def play_video(asset_id=None, title=None):
+    """Hand Kodi a playable video URL.
+
+    The URL points at the asset resolver rather than a signed CDN address: those
+    carry an expiry and must be obtained fresh at play time, which Kodi does for us
+    by following the redirect.
+    """
+    if not asset_id:
+        _fail_playback("play_video called without an asset id")
+        return
+
+    url = api.stream_url(asset_id, kodiutils.get_quality())
+    log("resolving video {0} -> {1}".format(asset_id, url))
+
+    item = xbmcgui.ListItem(path=url)
+    if title:
+        tag = item.getVideoInfoTag()
+        tag.setMediaType("video")
+        tag.setTitle(title)
+    xbmcplugin.setResolvedUrl(_HANDLE, True, item)
 
 
 @route("play_audio")
-def play_audio(url=None, asset_id=None, title=None):
-    """Resolve an audio track for the player. Implemented in Phase 4.2."""
-    xbmcplugin.setResolvedUrl(_HANDLE, False, listing.folder(""))
+def play_audio(url=None, asset_id=None, title=None, album=None, duration=None):
+    """Hand Kodi a playable audio URL, with metadata for the music OSD.
+
+    Two sources feed this: a direct MP3 from the study API (narration, hymns), and
+    a media-library asset id, which resolves through a different path to video.
+    """
+    stream = url or (api.audio_url(asset_id) if asset_id else None)
+    if not stream:
+        _fail_playback("play_audio called with neither a url nor an asset id")
+        return
+
+    log("resolving audio -> {0}".format(stream))
+
+    item = xbmcgui.ListItem(path=stream)
+    tag = item.getMusicInfoTag()
+    tag.setMediaType("song")
+    tag.setTitle(title or L(30300))
+    tag.setArtist(L(30307))
+    if album:
+        tag.setAlbum(album)
+    if duration:
+        try:
+            tag.setDuration(int(duration))
+        except (TypeError, ValueError):
+            pass
+    xbmcplugin.setResolvedUrl(_HANDLE, True, item)
 
 
 @route("read")

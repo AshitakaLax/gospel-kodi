@@ -38,6 +38,11 @@ MEDIA_COLLECTION = MEDIA_BASE + "/collection/{slug}"
 #: never stored. Note the service rejects HEAD with 405 - probe with GET.
 BINARY_LOOKUP = "https://binary-lookup.churchofjesuschrist.org/v1/assets/{asset_id}/{quality}/default.mp4"
 
+#: Audio resolves through a different path on the same service: no "/v1/assets/"
+#: prefix, and a bitrate (or "max") where video takes a pixel height. Verified to
+#: answer 206 audio/mp3.
+AUDIO_LOOKUP = "https://binary-lookup.churchofjesuschrist.org/{asset_id}/max/default"
+
 #: IIIF-style image endpoint. ``width`` is a pixel bound; height follows the aspect.
 IMAGE_URL = SITE + "/imgs/{image_id}/full/!{width},/0/default"
 
