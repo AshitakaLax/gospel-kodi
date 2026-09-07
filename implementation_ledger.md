@@ -21,7 +21,7 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | | 1.3 Router entry point | ✅ Complete |
 | 2 — Data layer | 2.1 Networking, cache, study API | ✅ Complete |
 | | 2.2 Come, Follow Me fetcher | ✅ Complete |
-| | 2.3 For the Strength of Youth + collections | ⬜ Pending |
+| | 2.3 For the Strength of Youth + collections | ✅ Complete |
 | 3 — Navigation | 3.1 ListItem mapping | ⬜ Pending |
 | | 3.2 Dynamic main menu | ⬜ Pending |
 | | 3.3 Browse tree | ⬜ Pending |
@@ -211,7 +211,7 @@ remembering if a listing ever seems slow to fail.
 ### Phase 2, Stage 2.2 — Come, Follow Me fetcher
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 2.3 commit)_
+- **Commit:** [`33c67b6`](https://github.com/AshitakaLax/gospel-kodi/commit/33c67b6)
 - **Delivered:** `resources/lib/cfm.py`; `get_cfm_lesson()` and `get_cfm_lessons()` in
   `api.py`; `cfm-current` and `cfm-list` CLI probes
 - **Fixed:** `CFM_LESSON_COUNT` corrected from 48 to 52
@@ -246,3 +246,64 @@ degrades to stale-but-working rather than a 404.
 | `cfm-list` | 52 lessons parsed from the table of contents |
 | Full cross-check | For **all 52** lessons, the arithmetic reproduces the published lesson number from the title's own start date — zero mismatches |
 | Unknown-year fallback | `resolve_manual(2031)` returns the 2026 manual and logs the error rather than raising |
+
+---
+
+### Phase 2, Stage 2.3 — For the Strength of Youth and media collections
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 3.1 commit)_
+- **Delivered:** `resources/lib/rsc.py`; `get_fsy()`, `get_fsy_overview()` and
+  `get_collection()` in `api.py`; `fsy` and `collection` CLI probes;
+  `MEDIA_COLLECTION` in `const.py`
+
+**For the Strength of Youth** needed no new machinery — it is a study-API manual like any
+other, and its table of contents parses into 16 chapters.
+
+**The media library turned out far better than the research suggested.** Requesting a
+collection page with an `RSC: 1` header returns a flight payload that embeds the page's
+items as ordinary JSON. Decoding it with `json.JSONDecoder.raw_decode` — rather than
+counting brackets, which breaks on strings containing brackets — yields complete,
+well-formed records:
+
+```json
+{"type": "video", "id": "<playable asset id>", "title": "...", "duration": "3:48",
+ "coverImage": {"src": "...", "srcSet": "... 320w, ... 1200w"},
+ "downloads": [{"downloadType": "LARGE", "url": ".../1080/default.mp4"}]}
+```
+
+Two details matter and are easy to get wrong. First, `coverImage.assetId` is an *image*
+hash, not the playable id — the item's own `id` is what resolves to video. Second, the
+site publishes its own `downloads` array, which maps SMALL/MEDIUM/LARGE onto exactly the
+360/720/1080 `binary-lookup` URLs this add-on constructs. That is independent
+confirmation that the URL template in `const.py` is correct, and those published URLs are
+now preferred over constructed ones when present, since they reflect what actually exists
+for a given asset.
+
+The parser also resolves the collection/leaf distinction the site uses: `broadcasts` is a
+folder of 17 sub-collections, and videos appear only at leaves such as
+`april-2026-general-conference`.
+
+**All of this is confined to `rsc.py`, and `get_collection()` is deliberately total** —
+it catches `NetworkError` and every other exception, logs, and returns `[]`. A redesign of
+the media site degrades browsing without breaking Come Follow Me, For the Strength of
+Youth, text or music.
+
+**Verification (live).**
+
+| Probe | Result |
+| --- | --- |
+| `fsy` | 16 chapters parsed |
+| `collection april-2026-general-conference` | 24 videos, each with 360/720/1080 streams |
+| `collection broadcasts` | 17 sub-collections |
+| Sweep of all 10 configured collections | Every one returned items; none empty |
+| End-to-end | Parsed a music video's `asset_id` from a listing and resolved it to HTTP 206 `video/mp4` |
+
+**Limitation found and confirmed: listings are capped at the first 24 items.** Every
+collection returns exactly 24, and `?page=2` and `?offset=24` both return the same first
+page, so the remainder is fetched client-side by the site's own JavaScript. This affects
+large collections — a music library of hundreds of videos will show 24. The study-API
+sections are unaffected: the hymnal and Come Follow Me return their full contents. Lifting
+this would mean reverse-engineering the client's own fetch call, which is exactly the
+brittle work the chosen strategy avoids; it is recorded here as a known trade-off rather
+than a defect.

@@ -21,9 +21,9 @@ import os
 import re
 import tempfile
 
-from resources.lib import const
+from resources.lib import const, rsc
 from resources.lib.cache import Cache
-from resources.lib.net import NetworkError, get_json, resolve_redirect
+from resources.lib.net import NetworkError, get, get_json, resolve_redirect
 
 LOG = logging.getLogger(__name__)
 
@@ -208,6 +208,61 @@ def _today():
 
 
 # --------------------------------------------------------------------------------
+# For the Strength of Youth
+# --------------------------------------------------------------------------------
+
+def get_fsy(use_cache=True):
+    """Chapters of the For the Strength of Youth guide."""
+    return list_study_children(const.FSY_URI, use_cache=use_cache)
+
+
+def get_fsy_overview(use_cache=True):
+    """The guide's own landing page, for the introductory text."""
+    return get_study_page(const.FSY_URI, use_cache=use_cache)
+
+
+# --------------------------------------------------------------------------------
+# Media library (best effort)
+# --------------------------------------------------------------------------------
+
+def get_collection(slug, use_cache=True):
+    """Items in a media-library collection.
+
+    The media library exposes no JSON API, so this parses the server-rendered RSC
+    payload. It is the one genuinely fragile path in the add-on and is therefore
+    total: any failure is logged and yields an empty list, never an exception, so
+    a site change degrades browsing while everything study-API-backed keeps working.
+    """
+    cache = _get_cache()
+    cache_key = "collection:{0}:{1}".format(const.LANG, slug)
+
+    if use_cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+    try:
+        payload = get(
+            const.MEDIA_COLLECTION.format(slug=slug),
+            params={"lang": const.LANG},
+            headers={"RSC": "1"},
+        )
+        items = rsc.parse_collection(payload)
+    except NetworkError as exc:
+        LOG.error("collection %s could not be fetched: %s", slug, exc)
+        return []
+    except Exception as exc:  # noqa: BLE001 - deliberately total; see docstring
+        LOG.exception("collection %s could not be parsed: %s", slug, exc)
+        return []
+
+    if not items:
+        LOG.warning("collection %s parsed to zero items", slug)
+    elif use_cache:
+        cache.set(cache_key, items)
+    return items
+
+
+# --------------------------------------------------------------------------------
 # Stream resolution
 # --------------------------------------------------------------------------------
 
@@ -244,8 +299,8 @@ def _main(argv):  # pragma: no cover - developer tool
     if not argv:
         print(__doc__)
         print(
-            "commands: study <uri> | children <uri> | resolve <assetId> "
-            "| cfm-current | cfm-list"
+            "commands: study <uri> | children <uri> | resolve <assetId>\n"
+            "          cfm-current | cfm-list | fsy | collection <slug>"
         )
         return 1
 
@@ -282,6 +337,26 @@ def _main(argv):  # pragma: no cover - developer tool
         for lesson in get_cfm_lessons(use_cache=False):
             print("{0:<62} {1}".format(lesson["uri"], lesson["title"][:60]))
         return 0
+
+    if command == "fsy":
+        for chapter in get_fsy(use_cache=False):
+            print("{0:<64} {1}".format(chapter["uri"], chapter["title"][:52]))
+        return 0
+
+    if command == "collection":
+        items = get_collection(args[0], use_cache=False)
+        for item in items:
+            target = item.get("slug") or item.get("asset_id")
+            print(
+                "{0:<11} {1:<42} {2:<24} {3}".format(
+                    item["kind"],
+                    item["title"][:40],
+                    target[:22],
+                    ",".join(sorted(item.get("streams", {}))) or "-",
+                )
+            )
+        print("--", len(items), "item(s)")
+        return 0 if items else 1
 
     print("unknown command:", command)
     return 1

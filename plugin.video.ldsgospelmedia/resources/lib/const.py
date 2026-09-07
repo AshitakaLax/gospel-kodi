@@ -29,6 +29,10 @@ STUDY_API = SITE + "/study/api/v3/language-pages/type/content"
 #: are recovered by parsing those payloads on a best-effort basis.
 MEDIA_BASE = SITE + "/media"
 
+#: A collection page. Requested with an ``RSC: 1`` header to obtain the server's
+#: flight payload, which embeds the page's items as ordinary JSON.
+MEDIA_COLLECTION = MEDIA_BASE + "/collection/{slug}"
+
 #: Video stream resolver. Formats to a stable URL that answers with a 302 redirect
 #: to a signed, expiring MP4. Kodi follows the redirect itself, so the signed URL is
 #: never stored. Note the service rejects HEAD with 405 - probe with GET.
