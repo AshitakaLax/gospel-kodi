@@ -30,8 +30,8 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | 5 — Scripture viewer | 5.1 Skin XML | ✅ Complete |
 | | 5.2 WindowXML class | ✅ Complete |
 | | 5.3 Text binding | ✅ Complete |
-| 6 — Polish | 6.1 Error handling | ⬜ Pending |
-| | 6.2 Caching and load times | ⬜ Pending |
+| 6 — Polish | 6.1 Error handling | ✅ Complete |
+| | 6.2 Caching and load times | ✅ Complete |
 | | 6.3 Cleanup and packaging | ⬜ Pending |
 
 ---
@@ -447,7 +447,7 @@ generic playback error on top of the add-on's message.
 ### Phase 5, Stages 5.1, 5.2 and 5.3 — Skin, window class and text binding
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 6.1 commit)_
+- **Commit:** [`f43370c`](https://github.com/AshitakaLax/gospel-kodi/commit/f43370c)
 - **Delivered:** `resources/skins/Default/1080i/scripture_viewer.xml`,
   `resources/skins/Default/media/parchment.png`, `resources/lib/viewer.py`,
   `resources/lib/html2text.py`, the `read` route and `_split_heading()`; string 30402
@@ -503,3 +503,45 @@ less jarring than scrolling into blank paper.
 | Heading split | "August 31–September 6" + quotation and reference beneath |
 | Scrolling | Line and page steps work; clamps at 0 and at the last page; Back closes |
 | Skin XML | Parses; ids 100/200/300/400/500 present; every colour a valid 8-digit hex; referenced texture exists |
+
+---
+
+## Phase 6 — Polish
+
+### Phase 6, Stages 6.1 and 6.2 — Error handling and caching
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 6.3 commit)_
+- **Delivered:** hardened `dispatch()` with `_accepted_params()` and a top-level guard;
+  `directory=False` route marking; per-read TTL override in `cache.py`;
+  `STATIC_TTL_MULTIPLIER` in `api.py`; string 30308
+
+**A real crash, found by trying to break it.** Navigating to `?action=root&stray=1`
+raised `TypeError: root() got an unexpected keyword argument 'stray'` and put a traceback
+in the user's log. This is not hypothetical: Kodi replays plugin URLs from favourites,
+widgets and the back stack, and those can carry parameters a handler was never written
+for. `_accepted_params()` now filters the query against each handler's own signature and
+logs what it dropped.
+
+A last-resort guard wraps every dispatch. An unexpected exception is logged with its full
+traceback and reported to the user as one plain sentence, rather than surfacing as a bare
+Kodi error dialog. Routes that do not build a directory — playback and the reader — are
+marked `directory=False` so the guard does not close a directory they never opened, which
+would make Kodi report a failed folder on top of the real message.
+
+**Nine malformed inputs now handled without raising:** unexpected parameters, a missing
+slug, a nonexistent slug, playback with no asset id, unreadable URIs, a nonexistent
+manual, a blank action, an unknown action, and a bad study page. Each either renders or
+fails cleanly with a notification.
+
+**Caching: the setting now governs only what actually moves.** Measured cold-to-warm on
+the main menu was 2.78 s → 0.06 s, so the mechanism was working, but every entry shared
+one lifetime. A hymnal's contents, a scripture chapter and a published lesson cannot
+change once they exist, yet a 6-hour setting was refetching them four times a day.
+Gospel Library pages are now read with a lifetime 28× the setting — 6 hours becomes
+7 days — while collection listings, which genuinely gain new videos, keep the base
+lifetime. Using a multiplier rather than a fixed number means the user's setting still
+scales everything, and setting it to zero still disables caching completely.
+
+Verified by ageing a cached entry past the base TTL and making any network call raise:
+the page was still served from cache, and a zero setting correctly refused to serve it.

@@ -29,6 +29,13 @@ LOG = logging.getLogger(__name__)
 
 _cache = None
 
+#: Gospel Library pages are published text: a hymn, a scripture chapter or a lesson
+#: does not change once it exists. They are therefore held far longer than the
+#: user's cache setting, which is there to govern listings that genuinely move.
+#: Expressed as a multiplier so the setting still scales everything, and so setting
+#: it to zero still disables caching completely.
+STATIC_TTL_MULTIPLIER = 28  # a 6-hour setting becomes 7 days for published text
+
 
 def configure(cache_directory=None, ttl_seconds=21600):
     """Point the data layer at a cache directory.
@@ -70,7 +77,7 @@ def get_study_page(uri, use_cache=True):
     cache_key = "study:{0}:{1}".format(const.LANG, uri)
 
     if use_cache:
-        cached = cache.get(cache_key)
+        cached = cache.get(cache_key, ttl=cache.ttl_seconds * STATIC_TTL_MULTIPLIER)
         if cached is not None:
             return cached
 

@@ -6,7 +6,9 @@ Kodi invokes this script once per navigation step, passing the plugin URL as
 to a handler, and leaves data work to :mod:`resources.lib.api` and presentation to
 :mod:`resources.lib.listing`.
 """
+import inspect
 import sys
+import traceback
 from urllib.parse import parse_qsl, urlencode
 
 import xbmcgui
@@ -22,10 +24,18 @@ _HANDLE = int(sys.argv[1])
 _ROUTES = {}
 
 
-def route(action):
+#: Actions that do not build a directory listing, and so must not be closed with
+#: ``endOfDirectory`` when they fail - doing so makes Kodi report a failed folder
+#: on top of whatever the handler already reported.
+_NON_DIRECTORY = set()
+
+
+def route(action, directory=True):
     """Register a handler for ``?action=<action>``."""
     def decorator(func):
         _ROUTES[action] = func
+        if not directory:
+            _NON_DIRECTORY.add(action)
         return func
     return decorator
 
@@ -373,7 +383,7 @@ def _fail_playback(message):
     xbmcplugin.setResolvedUrl(_HANDLE, False, xbmcgui.ListItem())
 
 
-@route("play_video")
+@route("play_video", directory=False)
 def play_video(asset_id=None, title=None):
     """Hand Kodi a playable video URL.
 
@@ -396,7 +406,7 @@ def play_video(asset_id=None, title=None):
     xbmcplugin.setResolvedUrl(_HANDLE, True, item)
 
 
-@route("play_audio")
+@route("play_audio", directory=False)
 def play_audio(url=None, asset_id=None, title=None, album=None, duration=None):
     """Hand Kodi a playable audio URL, with metadata for the music OSD.
 
@@ -425,7 +435,7 @@ def play_audio(url=None, asset_id=None, title=None, album=None, duration=None):
     xbmcplugin.setResolvedUrl(_HANDLE, True, item)
 
 
-@route("read")
+@route("read", directory=False)
 def read(uri=None):
     """Open a page in the scripture reading window.
 
@@ -477,7 +487,7 @@ def _split_heading(title):
     return title, ""
 
 
-@route("clear_cache")
+@route("clear_cache", directory=False)
 def clear_cache():
     """Wired to the "clear cached data" button in settings."""
     removed = api.clear_cache()
@@ -489,9 +499,24 @@ def clear_cache():
 # Dispatch
 # --------------------------------------------------------------------------------
 
+def _accepted_params(handler, params):
+    """Keep only the parameters a handler actually declares.
+
+    Kodi replays plugin URLs from favourites, widgets and the "back" stack, and
+    those can carry parameters a handler was never written for. Passing them
+    straight through raises TypeError and puts a traceback in the user's log, so
+    unknown keys are dropped with a note instead.
+    """
+    accepted = set(inspect.signature(handler).parameters)
+    unknown = sorted(set(params) - accepted)
+    if unknown:
+        log("ignoring unrecognised parameter(s): {0}".format(", ".join(unknown)))
+    return {key: value for key, value in params.items() if key in accepted}
+
+
 def dispatch(query_string):
     params = dict(parse_qsl(query_string.lstrip("?")))
-    action = params.pop("action", "root")
+    action = params.pop("action", "") or "root"
     handler = _ROUTES.get(action)
 
     if handler is None:
@@ -501,7 +526,16 @@ def dispatch(query_string):
         return
 
     log("dispatch {0} {1}".format(action, params))
-    handler(**params)
+    try:
+        handler(**_accepted_params(handler, params))
+    except Exception:  # noqa: BLE001 - last resort; nothing may escape to Kodi
+        # A traceback here would surface to the user as a bare Kodi error dialog
+        # with no indication of what failed, so it is logged in full and reported
+        # as a plain message instead.
+        log_error("action {0!r} failed:\n{1}".format(action, traceback.format_exc()))
+        kodiutils.notify_error(L(30308))
+        if action not in _NON_DIRECTORY:
+            xbmcplugin.endOfDirectory(_HANDLE, succeeded=False)
 
 
 if __name__ == "__main__":

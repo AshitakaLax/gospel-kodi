@@ -176,6 +176,10 @@ msgctxt "#30307"
 msgid "The Church of Jesus Christ of Latter-day Saints"
 msgstr ""
 
+msgctxt "#30308"
+msgid "Something went wrong. See the Kodi log for details."
+msgstr ""
+
 # Reading window
 msgctxt "#30400"
 msgid "Read"

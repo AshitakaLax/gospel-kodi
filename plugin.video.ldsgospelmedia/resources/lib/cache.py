@@ -41,14 +41,21 @@ class Cache:
             return False
         return True
 
-    def get(self, key):
-        """Return the cached value for ``key``, or ``None`` if absent or stale."""
+    def get(self, key, ttl=None):
+        """Return the cached value for ``key``, or ``None`` if absent or stale.
+
+        ``ttl`` overrides the configured lifetime for this read. Content that cannot
+        meaningfully change - a hymnal's contents, a scripture chapter - is read with
+        a long lifetime, so the user's setting governs listings that actually move
+        without forcing pointless refetches of text that has been fixed for decades.
+        """
         if not self.enabled:
             return None
+        lifetime = self.ttl_seconds if ttl is None else ttl
         path = self._path(key)
         try:
             age = time.time() - os.path.getmtime(path)
-            if age > self.ttl_seconds:
+            if age > lifetime:
                 LOG.debug("cache stale (%.0fs) for %s", age, key)
                 return None
             with open(path, "r", encoding="utf-8") as handle:
