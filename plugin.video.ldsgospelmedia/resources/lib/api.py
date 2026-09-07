@@ -148,6 +148,66 @@ def list_study_children(uri, pattern=None, use_cache=True):
 
 
 # --------------------------------------------------------------------------------
+# Come, Follow Me
+# --------------------------------------------------------------------------------
+
+def get_cfm_lesson(today=None, use_cache=True):
+    """Fetch the Come, Follow Me lesson for the week containing ``today``.
+
+    Returns the normalised study page with three extra keys: ``lesson_number``,
+    ``manual_uri`` and ``verified`` — the last being the result of checking the
+    computed week against the date range printed in the lesson's own title.
+
+    ``verified`` is ``True`` when they agree, ``False`` when they disagree (which
+    means the anchor in :mod:`resources.lib.const` has drifted and needs updating),
+    and ``None`` when the title carried no parseable date range.
+    """
+    from resources.lib import cfm
+
+    today = today or _today()
+    uri, number = cfm.current_lesson_uri(today)
+    page = get_study_page(uri, use_cache=use_cache)
+
+    verified = cfm.describes_date(page["title"], today)
+    if verified is False:
+        LOG.error(
+            "Come, Follow Me lesson %d is titled %r, which does not cover %s. "
+            "The anchor date in const.CFM_MANUALS has probably drifted.",
+            number,
+            page["title"][:60],
+            today.isoformat(),
+        )
+    elif verified is None:
+        LOG.warning("could not read a date range from lesson title %r", page["title"][:60])
+
+    page = dict(page)
+    page.update(
+        {
+            "lesson_number": number,
+            "manual_uri": uri.rsplit("/", 1)[0],
+            "verified": verified,
+        }
+    )
+    return page
+
+
+def get_cfm_lessons(today=None, use_cache=True):
+    """All lessons in the current manual's table of contents."""
+    from resources.lib import cfm
+
+    manual_uri, _, _ = cfm.resolve_manual(today or _today())
+    return list_study_children(
+        manual_uri, pattern=r"/\d{2}$", use_cache=use_cache
+    )
+
+
+def _today():
+    from datetime import date
+
+    return date.today()
+
+
+# --------------------------------------------------------------------------------
 # Stream resolution
 # --------------------------------------------------------------------------------
 
@@ -183,7 +243,10 @@ def _main(argv):  # pragma: no cover - developer tool
 
     if not argv:
         print(__doc__)
-        print("commands: study <uri> | children <uri> | resolve <assetId>")
+        print(
+            "commands: study <uri> | children <uri> | resolve <assetId> "
+            "| cfm-current | cfm-list"
+        )
         return 1
 
     command, args = argv[0], argv[1:]
@@ -204,6 +267,21 @@ def _main(argv):  # pragma: no cover - developer tool
         result = verify_stream(args[0], args[1] if len(args) > 1 else "1080")
         print(json_module.dumps(result, indent=2))
         return 0 if result["ok"] else 1
+
+    if command == "cfm-current":
+        page = get_cfm_lesson(use_cache=False)
+        print("lesson  :", page["lesson_number"])
+        print("uri     :", page["uri"])
+        print("title   :", page["title"])
+        print("audio   :", len(page["audio"]), "track(s)")
+        print("verified:", page["verified"])
+        # The arithmetic and the published title must agree, or the anchor has drifted.
+        return 0 if page["verified"] else 1
+
+    if command == "cfm-list":
+        for lesson in get_cfm_lessons(use_cache=False):
+            print("{0:<62} {1}".format(lesson["uri"], lesson["title"][:60]))
+        return 0
 
     print("unknown command:", command)
     return 1

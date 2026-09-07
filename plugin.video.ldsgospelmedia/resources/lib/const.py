@@ -68,7 +68,11 @@ CFM_MANUALS = {
     2026: ("/manual/come-follow-me-for-home-and-church-old-testament-2026", date(2025, 12, 29)),
 }
 
-CFM_LESSON_COUNT = 48
+#: Highest lesson number in the manual, used to clamp the week arithmetic.
+#: Counted from the live table of contents: the 2026 manual runs /01 ("December
+#: 29-January 4") through /52 ("December 21-27"), i.e. a full 52 weeks - not the 48
+#: initially assumed. Verify this against `api.py cfm-list` when adding a new year.
+CFM_LESSON_COUNT = 52
 
 FSY_URI = "/manual/for-the-strength-of-youth"
 

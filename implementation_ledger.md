@@ -20,7 +20,7 @@ See [`implementation_plan.md`](implementation_plan.md) for the full plan.
 | | 1.2 Add-on skeleton | ✅ Complete |
 | | 1.3 Router entry point | ✅ Complete |
 | 2 — Data layer | 2.1 Networking, cache, study API | ✅ Complete |
-| | 2.2 Come, Follow Me fetcher | ⬜ Pending |
+| | 2.2 Come, Follow Me fetcher | ✅ Complete |
 | | 2.3 For the Strength of Youth + collections | ⬜ Pending |
 | 3 — Navigation | 3.1 ListItem mapping | ⬜ Pending |
 | | 3.2 Dynamic main menu | ⬜ Pending |
@@ -157,7 +157,7 @@ rollover.
 ### Phase 2, Stage 2.1 — Networking, caching and the study API
 
 - **Completed:** 2026-09-06 (UTC)
-- **Commit:** _(pending — recorded in the Stage 2.2 commit)_
+- **Commit:** [`bec5d5b`](https://github.com/AshitakaLax/gospel-kodi/commit/bec5d5b)
 - **Delivered:** `resources/lib/net.py`, `resources/lib/cache.py`,
   `resources/lib/api.py`; logging bridge and cache wiring in `kodiutils.py` and
   `addon.py`
@@ -205,3 +205,44 @@ broken silently.
 404. Because 500 is in the retryable set, a bad URI costs three requests before failing.
 Acceptable for now — real URIs come from parsed links, not user input — but worth
 remembering if a listing ever seems slow to fail.
+
+---
+
+### Phase 2, Stage 2.2 — Come, Follow Me fetcher
+
+- **Completed:** 2026-09-06 (UTC)
+- **Commit:** _(pending — recorded in the Stage 2.3 commit)_
+- **Delivered:** `resources/lib/cfm.py`; `get_cfm_lesson()` and `get_cfm_lessons()` in
+  `api.py`; `cfm-current` and `cfm-list` CLI probes
+- **Fixed:** `CFM_LESSON_COUNT` corrected from 48 to 52
+
+**A bug caught by verification.** The plan assumed 48 lessons. Listing the live table of
+contents showed the 2026 manual actually runs `/01` ("December 29–January 4") through
+`/52` ("December 21–27") — a full 52 weeks. The clamp at 48 would have pinned every week
+from mid-November onward to lesson 48, so the add-on would have quietly shown the wrong
+lesson for the last six weeks of every year. This is precisely the failure mode that is
+invisible without checking against real data.
+
+**Two independent checks that must agree.** The lesson number is computed by arithmetic
+from an anchor Monday, while the published lesson title states its own date range. These
+derive from different sources, so agreement is meaningful. `cfm.describes_date()` parses
+the range out of the title and `get_cfm_lesson()` reports the comparison as `verified`:
+`True` when they agree, `False` when the anchor has drifted, `None` when the title has no
+parseable range. A `False` is logged as an error naming the constant that needs updating.
+
+Title parsing handles both the cross-month form ("August 31–September 6") and the
+same-month form ("September 7–13"), and rolls the end date into the following year for
+ranges that span New Year — the case that covers lesson 01.
+
+**Annual rollover.** `resolve_manual()` falls back to the newest manual on record for an
+unknown year and logs an error naming `const.CFM_MANUALS`. A January rollover therefore
+degrades to stale-but-working rather than a 404.
+
+**Verification (live).**
+
+| Probe | Result |
+| --- | --- |
+| `cfm-current` | Lesson 36, "August 31–September 6 … Psalms 102–103 …", 1 narration track, `verified: True` |
+| `cfm-list` | 52 lessons parsed from the table of contents |
+| Full cross-check | For **all 52** lessons, the arithmetic reproduces the published lesson number from the title's own start date — zero mismatches |
+| Unknown-year fallback | `resolve_manual(2031)` returns the 2026 manual and logs the error rather than raising |
